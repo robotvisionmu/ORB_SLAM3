@@ -26,8 +26,16 @@ namespace ORB_SLAM3
 {
 
 Viewer::Viewer(System* pSystem, FrameDrawer *pFrameDrawer, MapDrawer *pMapDrawer, Tracking *pTracking, const string &strSettingPath, Settings* settings):
-    both(false), mpSystem(pSystem), mpFrameDrawer(pFrameDrawer),mpMapDrawer(pMapDrawer), mpTracker(pTracking),
-    mbFinishRequested(false), mbFinished(true), mbStopped(true), mbStopRequested(false)
+    both(false), 
+    mpSystem(pSystem), 
+    mpFrameDrawer(pFrameDrawer),
+    mpMapDrawer(pMapDrawer), 
+    mpTracker(pTracking),
+    mbFinishRequested(false), 
+    mbFinished(true), 
+    mbStopped(true), 
+    mbStopRequested(false), 
+    mbQuitRequested(false)
 {
     if(settings){
         newParameterLoader(settings);
@@ -306,6 +314,11 @@ void Viewer::Run()
             menuStep = false;
         }
 
+        if(pangolin::ShouldQuit())
+        {
+            RequestQuit();
+        }
+
 
         d_cam.Activate(s_cam);
         glClearColor(1.0f,1.0f,1.0f,1.0f);
@@ -444,9 +457,19 @@ void Viewer::Release()
     mbStopped = false;
 }
 
-/*void Viewer::SetTrackingPause()
+// ----------------------------------------------------
+// Custom Functions 
+// ----------------------------------------------------
+void Viewer::RequestQuit()
 {
-    mbStopTrack = true;
-}*/
+    unique_lock<mutex> lock(mMutexFinish);
+    mbQuitRequested = true;
+}
+
+bool Viewer::ShouldQuit()
+{
+    unique_lock<mutex> lock(mMutexFinish);
+    return mbQuitRequested;
+}
 
 }

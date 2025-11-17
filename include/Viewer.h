@@ -64,6 +64,13 @@ public:
     //void SetTrackingPause();
 
     bool both;
+
+    // ----------------------------------------------------
+    // Custom Functions 
+    // ----------------------------------------------------
+    bool ShouldQuit();
+    void RequestQuit();
+    
 private:
 
     bool ParseViewerParamFile(cv::FileStorage &fSettings);
@@ -84,7 +91,9 @@ private:
 
     bool CheckFinish();
     void SetFinish();
+
     bool mbFinishRequested;
+   
     bool mbFinished;
     std::mutex mMutexFinish;
 
@@ -94,11 +103,11 @@ private:
 
     bool mbStopTrack;
 
+    // Custom
+    bool mbQuitRequested;
+
 };
 
 }
 
-
 #endif // VIEWER_H
-	
-
