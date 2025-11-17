@@ -27,6 +27,8 @@
 #include<string>
 #include<thread>
 #include<opencv2/core/core.hpp>
+#include <map>
+#include <array>
 
 #include "Tracking.h"
 #include "FrameDrawer.h"
@@ -140,6 +142,8 @@ public:
     void Shutdown();
     bool isShutDown();
 
+    std::vector<Eigen::Matrix4f> GetCameraTrajectory();
+
     // Save camera trajectory in the TUM RGB-D dataset format.
     // Only for stereo and RGB-D. This method does not work for monocular.
     // Call first Shutdown()
@@ -151,7 +155,6 @@ public:
     // Call first Shutdown()
     // See format details at: http://vision.in.tum.de/data/datasets/rgbd-dataset
     void SaveKeyFrameTrajectoryTUM(const string &filename);
-
     void SaveTrajectoryEuRoC(const string &filename);
     void SaveKeyFrameTrajectoryEuRoC(const string &filename);
 
@@ -185,6 +188,20 @@ public:
     void ChangeDataset();
 
     float GetImageScale();
+
+    // ----------------------------------------------------
+    // Custom Functions 
+    // ----------------------------------------------------
+    bool ViewerShouldQuit();
+    int GetNumMapsInAtlas();
+    int GetActiveMapID();
+    std::vector<double> GetAllKeyFrameTimes();
+    std::vector<std::array<float,16>> GetAllKeyFramePoses();
+    std::vector<int> GetAllKeyFrameMapIDs();
+    void GetAllKeyFrameData(std::vector<double>& times,
+                            std::vector<std::array<float,16>>& poses,
+                            std::vector<int>& mapIDs);
+
 
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);

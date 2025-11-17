@@ -410,4 +410,22 @@ map<long unsigned int, KeyFrame*> Atlas::GetAtlasKeyframes()
     return mpIdKFs;
 }
 
+// ----------------------------------------------------
+// Custom Functions 
+// ----------------------------------------------------
+
+std::vector<KeyFrameSnapshot> Atlas::GetAllKeyFrameSnapshots()
+{
+    std::vector<Map*> vpMaps = GetAllMaps();
+    std::vector<KeyFrameSnapshot> vKFSnaps;
+
+    for(Map* pMap : vpMaps)
+    {
+        std::vector<KeyFrameSnapshot> vMapSnaps = pMap->GetKeyFrameSnapshots();
+        vKFSnaps.insert(vKFSnaps.end(), vMapSnaps.begin(), vMapSnaps.end());
+    }
+
+    return vKFSnaps;
+}
+
 } //namespace ORB_SLAM3

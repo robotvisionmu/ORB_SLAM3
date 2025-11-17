@@ -514,6 +514,8 @@ void System::ResetActiveMap()
 
 void System::Shutdown()
 {
+    cout << "System shutdown requested" << endl;
+    
     {
         unique_lock<mutex> lock(mMutexReset);
         mbShutDown = true;
@@ -523,36 +525,37 @@ void System::Shutdown()
 
     mpLocalMapper->RequestFinish();
     mpLoopCloser->RequestFinish();
-    /*if(mpViewer)
+    if(mpViewer)
     {
         mpViewer->RequestFinish();
         while(!mpViewer->isFinished())
             usleep(5000);
-    }*/
+    }
 
     // Wait until all thread have effectively stopped
-    /*while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
+    while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
     {
         if(!mpLocalMapper->isFinished())
-            cout << "mpLocalMapper is not finished" << endl;*/
-        /*if(!mpLoopCloser->isFinished())
+            cout << "mpLocalMapper is not finished" << endl;
+        if(!mpLoopCloser->isFinished())
             cout << "mpLoopCloser is not finished" << endl;
         if(mpLoopCloser->isRunningGBA()){
             cout << "mpLoopCloser is running GBA" << endl;
             cout << "break anyway..." << endl;
             break;
-        }*/
-        /*usleep(5000);
-    }*/
-
-    if(!mStrSaveAtlasToFile.empty())
-    {
-        Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
-        SaveAtlas(FileType::BINARY_FILE);
+        }
+        usleep(5000);
+        // cout << "Waiting..." << endl;
     }
+    cout << "All threads stopped" << endl;
+    // if(!mStrSaveAtlasToFile.empty())
+    // {
+    //     Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
+    //     SaveAtlas(FileType::BINARY_FILE);
+    // }
 
-    /*if(mpViewer)
-        pangolin::BindToContext("ORB-SLAM2: Map Viewer");*/
+    // if(mpViewer)
+    //     pangolin::BindToContext("ORB-SLAM3: Map Viewer");
 
 #ifdef REGISTER_TIMES
     mpTracker->PrintTimeStats();
@@ -564,6 +567,52 @@ void System::Shutdown()
 bool System::isShutDown() {
     unique_lock<mutex> lock(mMutexReset);
     return mbShutDown;
+}
+
+vector<Eigen::Matrix4f> System::GetCameraTrajectory()
+{
+    vector<KeyFrame*> vpKFs = mpAtlas->GetAllKeyFrames();
+    sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
+
+    // Transform all keyframes so that the first keyframe is at the origin.
+    // After a loop closure the first keyframe might not be at the origin.
+    Sophus::SE3f Two = vpKFs[0]->GetPoseInverse();
+    vector<Eigen::Matrix4f> trajectory;
+    // Frame pose is stored relative to its reference keyframe (which is optimized by BA and pose graph).
+    // We need to get first the keyframe pose and then concatenate the relative transformation.
+    // Frames not localized (tracking failure) are not saved.
+
+    // For each frame we have a reference keyframe (lRit), the timestamp (lT) and a flag
+    // which is true when tracking failed (lbL).
+    list<ORB_SLAM3::KeyFrame*>::iterator lRit = mpTracker->mlpReferences.begin();
+    list<double>::iterator lT = mpTracker->mlFrameTimes.begin();
+    list<bool>::iterator lbL = mpTracker->mlbLost.begin();
+    for(list<Sophus::SE3f>::iterator lit=mpTracker->mlRelativeFramePoses.begin(),
+        lend=mpTracker->mlRelativeFramePoses.end();lit!=lend;lit++, lRit++, lT++, lbL++)
+    {
+        if(*lbL)
+            continue;
+
+        KeyFrame* pKF = *lRit;
+
+        Sophus::SE3f Trw;
+
+        // If the reference keyframe was culled, traverse the spanning tree to get a suitable keyframe.
+        while(pKF->isBad())
+        {
+            Trw = Trw * pKF->mTcp;
+            pKF = pKF->GetParent();
+        }
+
+        Trw = Trw * pKF->GetPose() * Two;
+
+        Sophus::SE3f Tcw = (*lit) * Trw;
+        Sophus::SE3f Twc = Tcw.inverse();
+
+        trajectory.push_back(Twc.matrix());
+    }
+    
+    return trajectory;
 }
 
 void System::SaveTrajectoryTUM(const string &filename)
@@ -1545,5 +1594,83 @@ string System::CalculateCheckSum(string filename, int type)
     return checksum;
 }
 
-} //namespace ORB_SLAM
+// -------------------------------------------------------
+// Custom Functions
+// -------------------------------------------------------
 
+bool System::ViewerShouldQuit()
+{
+    return mpViewer->ShouldQuit();
+}
+
+int System::GetNumMapsInAtlas()
+{
+    return mpAtlas->CountMaps();
+}
+
+int System::GetActiveMapID()
+{
+    return mpAtlas->GetCurrentMap()->GetId();
+}
+
+std::vector<double> System::GetAllKeyFrameTimes()
+{
+    std::vector<KeyFrameSnapshot> vSnaps = mpAtlas->GetAllKeyFrameSnapshots();
+    std::vector<double> vTimes;
+    vTimes.reserve(vSnaps.size());
+    for (const KeyFrameSnapshot &s : vSnaps) vTimes.push_back(s.time);
+    return vTimes;
+}
+
+std::vector<std::array<float,16>> System::GetAllKeyFramePoses()
+{
+    std::vector<KeyFrameSnapshot> vKFSnaps = mpAtlas->GetAllKeyFrameSnapshots();
+    std::vector<std::array<float,16>> vPoses;
+    if (vKFSnaps.empty()) return vPoses;
+
+    Sophus::SE3f Two = vKFSnaps[0].inversePose;
+    vPoses.reserve(vKFSnaps.size());
+    for (const auto& s : vKFSnaps)
+    {
+        Sophus::SE3f Twc = s.inversePose * Two;
+        Eigen::Matrix4f M = Twc.matrix();
+        std::array<float,16> a;
+        Eigen::Map<Eigen::Matrix<float,4,4,Eigen::RowMajor>>(a.data()) = M;
+        vPoses.push_back(a);
+    }
+    return vPoses;
+}
+
+std::vector<int> System::GetAllKeyFrameMapIDs()
+{
+    std::vector<KeyFrameSnapshot> vSnaps = mpAtlas->GetAllKeyFrameSnapshots();
+    std::vector<int> vMapIDs;
+    vMapIDs.reserve(vSnaps.size());
+    for (const KeyFrameSnapshot &s : vSnaps) vMapIDs.push_back(s.mapID);
+    return vMapIDs;
+}
+
+void System::GetAllKeyFrameData(std::vector<double>& times,
+                                      std::vector<std::array<float,16>>& poses,
+                                      std::vector<int>& mapIDs)
+{
+    std::vector<KeyFrameSnapshot> vSnaps = mpAtlas->GetAllKeyFrameSnapshots();
+    const size_t N = vSnaps.size();
+    times.clear(); poses.clear(); mapIDs.clear();
+    times.reserve(N); poses.reserve(N); mapIDs.reserve(N);
+    if (N == 0) return;
+
+    Sophus::SE3f Two = vSnaps[0].inversePose;
+    for (const auto& s : vSnaps)
+    {
+        times.push_back(s.time);
+        Sophus::SE3f Twc = s.inversePose * Two;
+        Eigen::Matrix4f M = Twc.matrix();
+        std::array<float,16> a;
+        Eigen::Map<Eigen::Matrix<float,4,4,Eigen::RowMajor>>(a.data()) = M;
+        poses.push_back(a);
+        mapIDs.push_back(s.mapID);
+    }
+}
+
+} //namespace ORB_SLAM

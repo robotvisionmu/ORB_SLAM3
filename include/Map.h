@@ -33,6 +33,12 @@
 namespace ORB_SLAM3
 {
 
+struct KeyFrameSnapshot {
+    double time;
+    Sophus::SE3f inversePose;
+    int mapID;
+};
+
 class MapPoint;
 class KeyFrame;
 class Atlas;
@@ -200,6 +206,12 @@ protected:
 
     // Mutex
     std::mutex mMutexMap;
+    
+// ----------------------------------------------------
+// Custom Functions 
+// ----------------------------------------------------
+public:
+    std::vector<KeyFrameSnapshot> GetKeyFrameSnapshots();
 
 };
 

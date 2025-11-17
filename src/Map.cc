@@ -490,5 +490,30 @@ void Map::PostLoad(KeyFrameDatabase* pKFDB, ORBVocabulary* pORBVoc/*, map<long u
     mvpBackupMapPoints.clear();
 }
 
+// ----------------------------------------------------
+// Custom Functions 
+// ----------------------------------------------------
+
+std::vector<KeyFrameSnapshot> Map::GetKeyFrameSnapshots()
+{
+    unique_lock<mutex> lock(mMutexMap);
+    std::vector<KeyFrameSnapshot> vMapSnaps;
+    std::vector<KeyFrame*> vKFs(mspKeyFrames.begin(), mspKeyFrames.end());
+    sort(vKFs.begin(),vKFs.end(),KeyFrame::lId);
+    
+    for (KeyFrame* pKF : vKFs)
+    {
+        if (pKF && !pKF->isBad())
+        {
+            KeyFrameSnapshot s;
+            s.time = pKF->mTimeStamp;
+            s.inversePose = pKF->GetPoseInverse();
+            s.mapID = pKF->GetMap()->GetId();
+            vMapSnaps.push_back(s);
+        }
+    }
+    
+    return vMapSnaps;
+}
 
 } //namespace ORB_SLAM3

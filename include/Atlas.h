@@ -139,6 +139,11 @@ public:
 
     long unsigned int GetNumLivedMP();
 
+    // ----------------------------------------------------
+    // Custom Functions 
+    // ----------------------------------------------------
+    std::vector<KeyFrameSnapshot> GetAllKeyFrameSnapshots();
+
 protected:
 
     std::set<Map*> mspMaps;
