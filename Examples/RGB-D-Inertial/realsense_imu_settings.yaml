@@ -1,0 +1,156 @@
+%YAML:1.0
+
+#--------------------------------------------------------------------------------------------
+# Camera Parameters. Adjust them!
+#--------------------------------------------------------------------------------------------
+File.version: "1.0"
+
+Camera.type: "PinHole"
+
+# Right Camera calibration and distortion parameters (OpenCV)
+# Camera1.fx: 611.973
+# Camera1.fy: 612.840
+# Camera1.cx: 321.158
+# Camera1.cy: 243.570
+# Camera1.fx: 616.142
+# Camera1.fy: 616.13
+# Camera1.cx: 328.572
+# Camera1.cy: 247.523
+# Camera1.fx: 580.131
+# Camera1.fy: 579.862
+# Camera1.cx: 324.688
+# Camera1.cy: 266.119
+
+Camera1.fx: 611.973
+Camera1.fy: 612.840
+Camera1.cx: 321.158
+Camera1.cy: 243.570
+
+# distortion parameters
+Camera1.k1: 0.13
+Camera1.k2: -0.26
+Camera1.p1: 0.0
+Camera1.p2: 0.0
+# Camera1.k1: 0.10877840870957929
+# Camera1.k2: -0.2557369177111874
+# Camera1.p1: 0.010812700339155072
+# Camera1.p2: -0.0014127815902548223
+
+# Camera resolution
+Camera.width: 640
+Camera.height: 480
+
+# Camera frames per second 
+Camera.fps: 30
+
+# Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
+Camera.RGB: 1
+
+Stereo.ThDepth: 40.0
+Stereo.b: 0.0745
+
+# Depth map values factor
+RGBD.DepthMapFactor: 1000.0
+
+# Transformation from body-frame (imu) to left camera
+# IMU.T_b_c1: !!opencv-matrix
+#    rows: 4
+#    cols: 4
+#    dt: f
+#    data: [0.999985, -0.005039, 0.002370, -0.020555,
+#        0.005036, 0.999986, 0.001331, 0.005012,
+#        -0.002377, -0.001319, 0.999996, 0.011358,
+#        0.0, 0.0, 0.0, 1.0]
+
+# rs-enumerate colour to gyro extrinsic
+# IMU.T_b_c1: !!opencv-matrix
+#    rows: 4
+#    cols: 4
+#    dt: f
+#    data: [0.999985, 0.00503606, -0.00237668, -0.020555,
+#        -0.0050392, 0.999986, -0.00131919, 0.005012,
+#        0.00237001, 0.00133114, 0.999996, 0.011358,
+#        0.0, 0.0, 0.0, 1.0]
+
+# kalibr result
+IMU.T_b_c1: !!opencv-matrix
+   rows: 4
+   cols: 4
+   dt: f
+   data: [ 0.99964186,  0.01087049, -0.02445357, -0.02786619,
+        -0.01105512,  0.9999113, -0.00742762,  0.01340092,
+        0.02437066,  0.00769529,  0.99967337,  0.01572932,
+        0.0,          0.0,          0.0,          1.0]
+
+# T_ic: (cam0 to imu0):
+# [[ 0.99964186 0.01087049 -0.02445357 -0.02786619]
+# [-0.01105512 0.9999113 -0.00742762 0.01340092]
+# [ 0.02437066 0.00769529 0.99967337 0.01572932]
+# [ 0.
+# 0.
+# 0.
+# 1.
+# ]]
+
+# T_ic: (cam0 to imu0):
+# [[ 0.99991593 0.01210443 0.00464849 -0.02066238]
+# [-0.01210413 0.99992674 -0.00009287 0.00560344]
+# [-0.00464927 0.0000366 0.99998919 0.01472697]
+# [ 0.
+# 0.
+# 0.
+# 1.
+# ]]
+
+# Do not insert KFs when recently lost
+IMU.InsertKFsWhenLost: 1
+
+# IMU noise (Use those from VINS-mono)
+# IMU.NoiseGyro: 1e-2 # 3 # 2.44e-4 #1e-3 # rad/s^0.5
+# IMU.NoiseAcc: 2e-3 #2 # 1.47e-3 #1e-2 # m/s^1.5
+# IMU.GyroWalk: 2e-6 # rad/s^1.5
+# IMU.AccWalk: 1e-4 # m/s^2.5
+
+IMU.NoiseGyro: 2.5e-3 # 3 # 2.44e-4 #1e-3 # rad/s^0.5
+IMU.NoiseAcc: 1.9e-2 #2 # 1.47e-3 #1e-2 # m/s^1.5
+IMU.GyroWalk: 2.34e-5 # rad/s^1.5
+IMU.AccWalk: 9.57e-5 # m/s^2.5
+IMU.Frequency: 200.0
+
+# IMU.NoiseGyro: 2.304506e-04    # rad/s (gyroscope white noise)
+# IMU.NoiseAcc: 9.298724e-02     # m/s² (accelerometer white noise)
+# IMU.GyroWalk: 3.508612e-04     # rad/s² (gyroscope random walk)
+# IMU.AccWalk: 8.948398e-01      # m/s³ (accelerometer random walk)
+
+#--------------------------------------------------------------------------------------------
+# ORB Parameters
+#--------------------------------------------------------------------------------------------
+# ORB Extractor: Number of features per image
+ORBextractor.nFeatures: 2000
+
+# ORB Extractor: Scale factor between levels in the scale pyramid 	
+ORBextractor.scaleFactor: 1.2
+
+# ORB Extractor: Number of levels in the scale pyramid	
+ORBextractor.nLevels: 10
+
+# ORB Extractor: Fast threshold
+# Image is divided in a grid. At each cell FAST are extracted imposing a minimum response.
+# Firstly we impose iniThFAST. If no corners are detected we impose a lower value minThFAST
+# You can lower these values if your images have low contrast			
+ORBextractor.iniThFAST: 12
+ORBextractor.minThFAST: 6
+
+#--------------------------------------------------------------------------------------------
+# Viewer Parameters
+#--------------------------------------------------------------------------------------------
+Viewer.KeyFrameSize: 0.05
+Viewer.KeyFrameLineWidth: 1.0
+Viewer.GraphLineWidth: 0.9
+Viewer.PointSize: 2.0
+Viewer.CameraSize: 0.08
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
+Viewer.ViewpointY: -0.7
+Viewer.ViewpointZ: -3.5
+Viewer.ViewpointF: 500.0
