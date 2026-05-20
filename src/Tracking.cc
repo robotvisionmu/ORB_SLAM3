@@ -2300,6 +2300,7 @@ void Tracking::Track()
     if(mState==OK || mState==RECENTLY_LOST)
     {
         // Store frame pose information to retrieve the complete camera trajectory afterwards.
+        std::unique_lock<std::mutex> lock(mMutexTraj);
         if(mCurrentFrame.isSet())
         {
             Sophus::SE3f Tcr_ = mCurrentFrame.GetPose() * mCurrentFrame.mpReferenceKF->GetPoseInverse();
@@ -2311,10 +2312,13 @@ void Tracking::Track()
         else
         {
             // This can happen if tracking is lost
-            mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
-            mlpReferences.push_back(mlpReferences.back());
-            mlFrameTimes.push_back(mlFrameTimes.back());
-            mlbLost.push_back(mState==LOST);
+            if(!mlRelativeFramePoses.empty() && !mlpReferences.empty() && !mlFrameTimes.empty() && !mlbLost.empty())
+            {
+                mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
+                mlpReferences.push_back(mlpReferences.back());
+                mlFrameTimes.push_back(mlFrameTimes.back());
+                mlbLost.push_back(mState==LOST);
+            }
         }
 
     }
@@ -2782,6 +2786,11 @@ void Tracking::UpdateLastFrame()
 {
     // Update pose according to reference keyframe
     KeyFrame* pRef = mLastFrame.mpReferenceKF;
+    std::unique_lock<std::mutex> lock(mMutexTraj);
+    if(mlRelativeFramePoses.empty())
+    {
+        return;
+    }
     Sophus::SE3f Tlr = mlRelativeFramePoses.back();
     mLastFrame.SetPose(Tlr * pRef->GetPose());
 
@@ -3820,10 +3829,13 @@ void Tracking::Reset(bool bLocMap)
     mbReadyToInitializate = false;
     mbSetInit=false;
 
-    mlRelativeFramePoses.clear();
-    mlpReferences.clear();
-    mlFrameTimes.clear();
-    mlbLost.clear();
+    {
+        std::unique_lock<std::mutex> lock(mMutexTraj);
+        mlRelativeFramePoses.clear();
+        mlpReferences.clear();
+        mlFrameTimes.clear();
+        mlbLost.clear();
+    }
     mCurrentFrame = Frame();
     mnLastRelocFrameId = 0;
     mLastFrame = Frame();
@@ -3895,21 +3907,23 @@ void Tracking::ResetActiveMap(bool bLocMap)
     int num_lost = 0;
     cout << "mnInitialFrameId = " << mnInitialFrameId << endl;
 
-    for(list<bool>::iterator ilbL = mlbLost.begin(); ilbL != mlbLost.end(); ilbL++)
     {
-        if(index < mnInitialFrameId)
-            lbLost.push_back(*ilbL);
-        else
+        std::unique_lock<std::mutex> lock(mMutexTraj);
+        for(list<bool>::iterator ilbL = mlbLost.begin(); ilbL != mlbLost.end(); ilbL++)
         {
-            lbLost.push_back(true);
-            num_lost += 1;
-        }
+            if(index < mnInitialFrameId)
+                lbLost.push_back(*ilbL);
+            else
+            {
+                lbLost.push_back(true);
+                num_lost += 1;
+            }
 
-        index++;
+            index++;
+        }
+        mlbLost = lbLost;
     }
     cout << num_lost << " Frames set to lost" << endl;
-
-    mlbLost = lbLost;
 
     mnInitialFrameId = mCurrentFrame.mnId;
     mnLastRelocFrameId = mCurrentFrame.mnId;
@@ -3981,6 +3995,7 @@ void Tracking::UpdateFrameIMU(const float s, const IMU::Bias &b, KeyFrame* pCurr
 {
     Map * pMap = pCurrentKeyFrame->GetMap();
     unsigned int index = mnFirstFrameId;
+    std::unique_lock<std::mutex> lock(mMutexTraj);
     list<ORB_SLAM3::KeyFrame*>::iterator lRit = mlpReferences.begin();
     list<bool>::iterator lbL = mlbLost.begin();
     for(auto lit=mlRelativeFramePoses.begin(),lend=mlRelativeFramePoses.end();lit!=lend;lit++, lRit++, lbL++)

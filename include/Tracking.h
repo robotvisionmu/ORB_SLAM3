@@ -153,6 +153,7 @@ public:
     list<KeyFrame*> mlpReferences;
     list<double> mlFrameTimes;
     list<bool> mlbLost;
+    mutable std::mutex mMutexTraj;
 
     // frames with estimated pose
     int mTrackedFr;
