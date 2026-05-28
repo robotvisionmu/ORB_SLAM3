@@ -74,6 +74,16 @@ void Atlas::CreateNewMap()
     mpCurrentMap = new Map(mnLastInitKFidMap);
     mpCurrentMap->SetCurrentMap();
     mspMaps.insert(mpCurrentMap);
+
+    MapEvent event;
+    event.type = MapEventType::MapCreated;
+    event.fromMapId = mpCurrentMap->GetId();
+    event.toMapId = mpCurrentMap->GetId();
+    event.timestamp = 0.0;
+    event.movedKeyframeIds.clear();
+    event.transform.fill(0.0f);
+    event.hasTransform = false;
+    PushMapEvent(event);
 }
 
 void Atlas::ChangeMap(Map* pMap)
@@ -272,7 +282,42 @@ void Atlas::RemoveBadMaps()
         delete pMap;
         pMap = static_cast<Map*>(NULL);
     }*/
+    for(Map* pMap : mspBadMaps)
+    {
+        if(!pMap)
+            continue;
+
+        MapEvent event;
+        event.type = MapEventType::MapRemoved;
+        event.fromMapId = pMap->GetId();
+        event.toMapId = pMap->GetId();
+        event.timestamp = 0.0;
+        event.movedKeyframeIds.clear();
+        event.transform.fill(0.0f);
+        event.hasTransform = false;
+        PushMapEvent(event);
+    }
     mspBadMaps.clear();
+}
+
+void Atlas::PushMapEvent(const MapEvent& event)
+{
+    unique_lock<mutex> lock(mMutexEvents);
+    mEventQueue.push_back(event);
+}
+
+std::vector<Atlas::MapEvent> Atlas::PopMapEvents()
+{
+    unique_lock<mutex> lock(mMutexEvents);
+    std::vector<MapEvent> events(mEventQueue.begin(), mEventQueue.end());
+    mEventQueue.clear();
+    return events;
+}
+
+std::vector<Atlas::MapEvent> Atlas::PeekMapEvents()
+{
+    unique_lock<mutex> lock(mMutexEvents);
+    return std::vector<MapEvent>(mEventQueue.begin(), mEventQueue.end());
 }
 
 bool Atlas::isInertial()

@@ -28,6 +28,9 @@
 
 #include <set>
 #include <mutex>
+#include <array>
+#include <deque>
+#include <vector>
 #include <boost/serialization/vector.hpp>
 #include <boost/serialization/export.hpp>
 
@@ -144,6 +147,26 @@ public:
     // ----------------------------------------------------
     std::vector<KeyFrameSnapshot> GetAllKeyFrameSnapshots();
 
+    enum class MapEventType {
+        MapCreated = 0,
+        MapMerged = 1,
+        MapRemoved = 2,
+    };
+
+    struct MapEvent {
+        MapEventType type;
+        long unsigned int fromMapId;
+        long unsigned int toMapId;
+        double timestamp;
+        std::vector<long unsigned int> movedKeyframeIds;
+        std::array<float,16> transform;
+        bool hasTransform;
+    };
+
+    void PushMapEvent(const MapEvent& event);
+    std::vector<MapEvent> PopMapEvents();
+    std::vector<MapEvent> PeekMapEvents();
+
 protected:
 
     std::set<Map*> mspMaps;
@@ -167,6 +190,9 @@ protected:
     // Mutex
     std::mutex mMutexAtlas;
 
+    // Event queue for Atlas lifecycle events
+    std::mutex mMutexEvents;
+    std::deque<MapEvent> mEventQueue;
 
 }; // class Atlas
 

@@ -27,10 +27,29 @@
 
 #include<mutex>
 #include<thread>
+#include<array>
 
 
 namespace ORB_SLAM3
 {
+
+namespace
+{
+std::array<float,16> Sim3ToArray(const g2o::Sim3& sim3)
+{
+    Eigen::Matrix3d R = sim3.rotation().toRotationMatrix();
+    Eigen::Vector3d t = sim3.translation();
+    double s = sim3.scale();
+
+    Eigen::Matrix4f M = Eigen::Matrix4f::Identity();
+    M.block<3,3>(0,0) = (s * R).cast<float>();
+    M.block<3,1>(0,3) = t.cast<float>();
+
+    std::array<float,16> a;
+    Eigen::Map<Eigen::Matrix<float,4,4,Eigen::RowMajor>>(a.data()) = M;
+    return a;
+}
+}
 
 LoopClosing::LoopClosing(Atlas *pAtlas, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, const bool bFixScale, const bool bActiveLC):
     mbResetRequested(false), mbResetActiveMapRequested(false), mbFinishRequested(false), mbFinished(true), mpAtlas(pAtlas),
@@ -1503,6 +1522,9 @@ void LoopClosing::MergeLocal()
         std::cout << "[Merge]: Ma has " << std::to_string(spLocalWindowMPs.size()) << " points" << std::endl;
     }*/
 
+    std::vector<long unsigned int> movedKfIds;
+    movedKfIds.reserve(spLocalWindowKFs.size());
+
     {
         unique_lock<mutex> currentLock(pCurrentMap->mMutexMapUpdate); // We update the current map with the Merge information
         unique_lock<mutex> mergeLock(pMergeMap->mMutexMapUpdate); // We remove the Kfs and MPs in the merged area from the old map
@@ -1528,6 +1550,7 @@ void LoopClosing::MergeLocal()
             pKFi->mnMergeCorrectedForKF = mpCurrentKF->mnId;
             pMergeMap->AddKeyFrame(pKFi);
             pCurrentMap->EraseKeyFrame(pKFi);
+            movedKfIds.push_back(pKFi->mnId);
 
             if(pCurrentMap->isImuInitialized())
             {
@@ -1551,7 +1574,7 @@ void LoopClosing::MergeLocal()
         mpAtlas->SetMapBad(pCurrentMap);
         pMergeMap->IncreaseChangeIndex();
         //TODO for debug
-        pMergeMap->ChangeId(pCurrentMap->GetId());
+        // pMergeMap->ChangeId(pCurrentMap->GetId());
 
         //std::cout << "[Merge]: merging maps finished" << std::endl;
     }
@@ -1724,6 +1747,7 @@ void LoopClosing::MergeLocal()
             unique_lock<mutex> mergeLock(pMergeMap->mMutexMapUpdate); // We remove the Kfs and MPs in the merged area from the old map
 
             //std::cout << "Merge outside KFs: " << vpCurrentMapKFs.size() << std::endl;
+            movedKfIds.reserve(movedKfIds.size() + vpCurrentMapKFs.size());
             for(KeyFrame* pKFi : vpCurrentMapKFs)
             {
                 if(!pKFi || pKFi->isBad() || pKFi->GetMap() != pCurrentMap)
@@ -1736,6 +1760,7 @@ void LoopClosing::MergeLocal()
                 pKFi->UpdateMap(pMergeMap);
                 pMergeMap->AddKeyFrame(pKFi);
                 pCurrentMap->EraseKeyFrame(pKFi);
+                movedKfIds.push_back(pKFi->mnId);
             }
 
             for(MapPoint* pMPi : vpCurrentMapMPs)
@@ -1748,6 +1773,23 @@ void LoopClosing::MergeLocal()
                 pCurrentMap->EraseMapPoint(pMPi);
             }
         }
+    }
+
+    {
+        const long unsigned int fromMapId = pCurrentMap->GetId();
+        const long unsigned int toMapId = pMergeMap->GetId();
+        const double mergeTimestamp = mpCurrentKF->mTimeStamp;
+        const std::array<float,16> mergeTransform = Sim3ToArray(mSold_new);
+
+        Atlas::MapEvent event;
+        event.type = Atlas::MapEventType::MapMerged;
+        event.fromMapId = fromMapId;
+        event.toMapId = toMapId;
+        event.timestamp = mergeTimestamp;
+        event.movedKeyframeIds = std::move(movedKfIds);
+        event.transform = mergeTransform;
+        event.hasTransform = true;
+        mpAtlas->PushMapEvent(event);
     }
 
 #ifdef REGISTER_TIMES

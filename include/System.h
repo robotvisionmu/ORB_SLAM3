@@ -201,6 +201,9 @@ public:
                             std::vector<int>& mapIDs);
     std::vector<std::array<float,16>> GetActiveFramePoses();
 
+    std::vector<Atlas::MapEvent> PopMapEvents();
+    std::vector<Atlas::MapEvent> PeekMapEvents();
+
 
 #ifdef REGISTER_TIMES
     void InsertRectTime(double& time);
