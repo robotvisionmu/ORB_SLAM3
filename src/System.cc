@@ -548,11 +548,11 @@ void System::Shutdown()
         // cout << "Waiting..." << endl;
     }
     cout << "All threads stopped" << endl;
-    // if(!mStrSaveAtlasToFile.empty())
-    // {
-    //     Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
-    //     SaveAtlas(FileType::BINARY_FILE);
-    // }
+    if(!mStrSaveAtlasToFile.empty())
+    {
+        Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
+        SaveAtlas(FileType::BINARY_FILE);
+    }
 
     // if(mpViewer)
     //     pangolin::BindToContext("ORB-SLAM3: Map Viewer");
@@ -1699,6 +1699,24 @@ vector<std::array<float,16>> System::GetActiveFramePoses()
     }
     
     return trajectory;
+}
+
+std::vector<Atlas::MapEvent> System::PopMapEvents()
+{
+    if(!mpAtlas)
+    {
+        return {};
+    }
+    return mpAtlas->PopMapEvents();
+}
+
+std::vector<Atlas::MapEvent> System::PeekMapEvents()
+{
+    if(!mpAtlas)
+    {
+        return {};
+    }
+    return mpAtlas->PeekMapEvents();
 }
 
 } //namespace ORB_SLAM
