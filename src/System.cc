@@ -548,11 +548,11 @@ void System::Shutdown()
         // cout << "Waiting..." << endl;
     }
     cout << "All threads stopped" << endl;
-    // if(!mStrSaveAtlasToFile.empty())
-    // {
-    //     Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
-    //     SaveAtlas(FileType::BINARY_FILE);
-    // }
+    if(!mStrSaveAtlasToFile.empty())
+    {
+        Verbose::PrintMess("Atlas saving to file " + mStrSaveAtlasToFile, Verbose::VERBOSITY_NORMAL);
+        SaveAtlas(FileType::BINARY_FILE);
+    }
 
     // if(mpViewer)
     //     pangolin::BindToContext("ORB-SLAM3: Map Viewer");
