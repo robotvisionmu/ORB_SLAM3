@@ -18,6 +18,7 @@
 
 #include "Atlas.h"
 #include "Viewer.h"
+#include "KeyFrameEventQueue.h"
 
 #include "GeometricCamera.h"
 #include "Pinhole.h"
@@ -104,6 +105,7 @@ void Atlas::AddKeyFrame(KeyFrame* pKF)
 {
     Map* pMapKF = pKF->GetMap();
     pMapKF->AddKeyFrame(pKF);
+    KeyFrameEventQueue::Instance().EnqueueCreated(pKF, "tracking");
 }
 
 void Atlas::AddMapPoint(MapPoint* pMP)

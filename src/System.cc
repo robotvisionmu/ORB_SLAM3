@@ -1627,6 +1627,16 @@ void System::GetAllKeyFrameData(std::vector<double>& times,
     }
 }
 
+std::vector<KeyFrameEvent> System::DrainKeyFrameEvents()
+{
+    return KeyFrameEventQueue::Instance().Drain();
+}
+
+uint64_t System::GetLatestKeyFrameEventId()
+{
+    return KeyFrameEventQueue::Instance().LatestKeyFrameEventId();
+}
+
 vector<std::array<float,16>> System::GetActiveFramePoses()
 {
     vector<KeyFrame*> vpKFs = mpAtlas->GetAllKeyFrames();

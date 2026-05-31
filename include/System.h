@@ -41,6 +41,7 @@
 #include "Viewer.h"
 #include "ImuTypes.h"
 #include "Settings.h"
+#include "KeyFrameEventQueue.h"
 
 
 namespace ORB_SLAM3
@@ -200,6 +201,8 @@ public:
                             std::vector<std::array<float,16>>& poses,
                             std::vector<int>& mapIDs);
     std::vector<std::array<float,16>> GetActiveFramePoses();
+    std::vector<KeyFrameEvent> DrainKeyFrameEvents();
+    uint64_t GetLatestKeyFrameEventId();
 
 
 #ifdef REGISTER_TIMES

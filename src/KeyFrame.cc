@@ -19,6 +19,7 @@
 #include "KeyFrame.h"
 #include "Converter.h"
 #include "ImuTypes.h"
+#include "KeyFrameEventQueue.h"
 #include<mutex>
 
 namespace ORB_SLAM3
@@ -37,7 +38,7 @@ KeyFrame::KeyFrame():
         mfLogScaleFactor(0), mvScaleFactors(0), mvLevelSigma2(0), mvInvLevelSigma2(0), mnMinX(0), mnMinY(0), mnMaxX(0),
         mnMaxY(0), mPrevKF(static_cast<KeyFrame*>(NULL)), mNextKF(static_cast<KeyFrame*>(NULL)), mbFirstConnection(true), mpParent(NULL), mbNotErase(false),
         mbToBeErased(false), mbBad(false), mHalfBaseline(0), mbCurrentPlaceRecognition(false), mnMergeCorrectedForKF(0),
-        NLeft(0),NRight(0), mnNumberOfOpt(0), mbHasVelocity(false)
+        NLeft(0),NRight(0), mnNumberOfOpt(0), mbHasVelocity(false), mbPoseInitialized(false)
 {
 
 }
@@ -59,7 +60,8 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap), mbCurrentPlaceRecognition(false), mNameFile(F.mNameFile), mnMergeCorrectedForKF(0),
     mpCamera(F.mpCamera), mpCamera2(F.mpCamera2),
     mvLeftToRightMatch(F.mvLeftToRightMatch),mvRightToLeftMatch(F.mvRightToLeftMatch), mTlr(F.GetRelativePoseTlr()),
-    mvKeysRight(F.mvKeysRight), NLeft(F.Nleft), NRight(F.Nright), mTrl(F.GetRelativePoseTrl()), mnNumberOfOpt(0), mbHasVelocity(false)
+    mvKeysRight(F.mvKeysRight), NLeft(F.Nleft), NRight(F.Nright), mTrl(F.GetRelativePoseTrl()), mnNumberOfOpt(0), mbHasVelocity(false),
+    mbPoseInitialized(false)
 {
     mnId=nNextId++;
 
@@ -108,16 +110,33 @@ void KeyFrame::ComputeBoW()
 
 void KeyFrame::SetPose(const Sophus::SE3f &Tcw)
 {
-    unique_lock<mutex> lock(mMutexPose);
+    Sophus::SE3f newTwc;
+    bool hadPose = false;
 
-    mTcw = Tcw;
-    mRcw = mTcw.rotationMatrix();
-    mTwc = mTcw.inverse();
-    mRwc = mTwc.rotationMatrix();
-
-    if (mImuCalib.mbIsSet) // TODO Use a flag instead of the OpenCV matrix
     {
-        mOwb = mRwc * mImuCalib.mTcb.translation() + mTwc.translation();
+        unique_lock<mutex> lock(mMutexPose);
+
+        hadPose = mbPoseInitialized;
+
+        mTcw = Tcw;
+        mRcw = mTcw.rotationMatrix();
+        mTwc = mTcw.inverse();
+        mRwc = mTwc.rotationMatrix();
+        newTwc = mTwc;
+        mbPoseInitialized = true;
+
+        if (mImuCalib.mbIsSet) // TODO Use a flag instead of the OpenCV matrix
+        {
+            mOwb = mRwc * mImuCalib.mTcb.translation() + mTwc.translation();
+        }
+    }
+
+    if (hadPose)
+    {
+        Map* pMap = GetMap();
+        const int mapId = pMap ? static_cast<int>(pMap->GetId()) : -1;
+        KeyFrameEventQueue::Instance().EnqueueStateChanged(
+            this, mapId, mapId, newTwc, true, false, "pose_update");
     }
 }
 
@@ -674,6 +693,7 @@ void KeyFrame::SetBadFlag()
     }
 
 
+    KeyFrameEventQueue::Instance().EnqueueRemoved(this, "culling");
     mpMap->EraseKeyFrame(this);
     mpKeyFrameDB->erase(this);
 }
@@ -840,8 +860,21 @@ Map* KeyFrame::GetMap()
 
 void KeyFrame::UpdateMap(Map* pMap)
 {
-    unique_lock<mutex> lock(mMutexMap);
-    mpMap = pMap;
+    Map* pOldMap = nullptr;
+    Sophus::SE3f pose = GetPoseInverse();
+    {
+        unique_lock<mutex> lock(mMutexMap);
+        pOldMap = mpMap;
+        mpMap = pMap;
+    }
+
+    const int oldMapId = pOldMap ? static_cast<int>(pOldMap->GetId()) : -1;
+    const int newMapId = pMap ? static_cast<int>(pMap->GetId()) : -1;
+    if (oldMapId != newMapId)
+    {
+        KeyFrameEventQueue::Instance().EnqueueStateChanged(
+            this, oldMapId, newMapId, pose, false, true, newMapId >= 0 ? "merge" : "reset");
+    }
 }
 
 void KeyFrame::PreSave(set<KeyFrame*>& spKF,set<MapPoint*>& spMP, set<GeometricCamera*>& spCam)

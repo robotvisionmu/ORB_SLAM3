@@ -431,6 +431,7 @@ protected:
     Eigen::Matrix3f mRcw;
     Sophus::SE3<float> mTwc;
     Eigen::Matrix3f mRwc;
+    bool mbPoseInitialized;
 
     // IMU position
     Eigen::Vector3f mOwb;
