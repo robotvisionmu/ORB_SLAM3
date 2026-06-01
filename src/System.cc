@@ -1567,6 +1567,15 @@ int System::GetActiveMapID()
     return mpAtlas->GetCurrentMap()->GetId();
 }
 
+std::vector<unsigned long> System::GetAllKeyFrameIDs()
+{
+    std::vector<KeyFrameSnapshot> vSnaps = mpAtlas->GetAllKeyFrameSnapshots();
+    std::vector<unsigned long> vIDs;
+    vIDs.reserve(vSnaps.size());
+    for (const KeyFrameSnapshot &s : vSnaps) vIDs.push_back(s.id);
+    return vIDs;
+}
+
 std::vector<double> System::GetAllKeyFrameTimes()
 {
     std::vector<KeyFrameSnapshot> vSnaps = mpAtlas->GetAllKeyFrameSnapshots();

@@ -34,6 +34,7 @@ namespace ORB_SLAM3
 {
 
 struct KeyFrameSnapshot {
+    unsigned long id;
     double time;
     Sophus::SE3f inversePose;
     int mapID;

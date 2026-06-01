@@ -506,6 +506,7 @@ std::vector<KeyFrameSnapshot> Map::GetKeyFrameSnapshots()
         if (pKF && !pKF->isBad())
         {
             KeyFrameSnapshot s;
+            s.id = pKF->mnId;
             s.time = pKF->mTimeStamp;
             s.inversePose = pKF->GetPoseInverse();
             s.mapID = pKF->GetMap()->GetId();

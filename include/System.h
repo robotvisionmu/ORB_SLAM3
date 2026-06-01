@@ -194,6 +194,7 @@ public:
     bool ViewerShouldQuit();
     int GetNumMapsInAtlas();
     int GetActiveMapID();
+    std::vector<unsigned long> GetAllKeyFrameIDs();
     std::vector<double> GetAllKeyFrameTimes();
     std::vector<std::array<float,16>> GetAllKeyFramePoses();
     std::vector<int> GetAllKeyFrameMapIDs();
