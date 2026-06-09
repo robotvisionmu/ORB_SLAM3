@@ -1550,8 +1550,6 @@ void LoopClosing::MergeLocal()
         mpAtlas->ChangeMap(pMergeMap);
         mpAtlas->SetMapBad(pCurrentMap);
         pMergeMap->IncreaseChangeIndex();
-        //TODO for debug
-        pMergeMap->ChangeId(pCurrentMap->GetId());
 
         //std::cout << "[Merge]: merging maps finished" << std::endl;
     }
