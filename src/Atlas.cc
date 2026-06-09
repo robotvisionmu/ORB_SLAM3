@@ -104,8 +104,10 @@ void Atlas::SetViewer(Viewer* pViewer)
 void Atlas::AddKeyFrame(KeyFrame* pKF)
 {
     Map* pMapKF = pKF->GetMap();
-    pMapKF->AddKeyFrame(pKF);
-    KeyFrameEventQueue::Instance().EnqueueCreated(pKF, "tracking");
+    if(pMapKF->AddKeyFrame(pKF))
+    {
+        KeyFrameEventQueue::Instance().EnqueueCreated(pKF, "tracking");
+    }
 }
 
 void Atlas::AddMapPoint(MapPoint* pMP)

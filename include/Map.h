@@ -80,7 +80,7 @@ public:
     Map(int initKFid);
     ~Map();
 
-    void AddKeyFrame(KeyFrame* pKF);
+    bool AddKeyFrame(KeyFrame* pKF);
     void AddMapPoint(MapPoint* pMP);
     void EraseMapPoint(MapPoint* pMP);
     void EraseKeyFrame(KeyFrame* pKF);
